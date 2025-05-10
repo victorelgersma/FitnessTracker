@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Push-up Logger</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Added Chart.js CDN -->
+</head>
+<body class="bg-black text-white font-mono p-4 md:p-8">
+    <div class="container mx-auto max-w-md border-4 border-white p-6 md:p-8">
+        <h1 class="text-4xl md:text-5xl font-bold mb-6 md:mb-8 text-center uppercase tracking-wider">Push-up Log</h1>
+
+        <div class="mb-6 md:mb-8">
+            <label for="pushups" class="block text-lg mb-2 uppercase">Today's push-ups</label>
+            <input type="number" id="pushups" name="pushups" class="w-full p-3 bg-black text-white border-2 border-white focus:outline-none focus:border-lime-400 text-lg" placeholder="Enter count" min="1">
+        </div>
+
+        <button id="logButton" class="w-full bg-lime-400 text-black font-bold py-3 px-4 border-2 border-lime-400 hover:bg-black hover:text-lime-400 transition-colors duration-150 text-lg uppercase tracking-wider">
+            Log Push-ups
+        </button>
+
+        <!-- Canvas for the chart -->
+        <div class="mt-8 md:mt-12">
+            <h2 class="text-2xl md:text-3xl font-bold mb-4 uppercase tracking-wider">Progress</h2>
+            <canvas id="pushupChart" class="border-2 border-white p-2"></canvas>
+        </div>
+
+        <div class="mt-8 md:mt-12">
+            <h2 class="text-2xl md:text-3xl font-bold mb-4 uppercase tracking-wider">Entries</h2>
+            <ul id="log-list" class="space-y-3">
+                <!-- Logged entries will be dynamically inserted here by JavaScript -->
+            </ul>
+        </div>
+    </div>
+    
+    <script>
+        const LOCAL_STORAGE_KEY = 'pushupLogData';
+
+        // DOM Elements
+        const logButton = document.getElementById('logButton');
+        const pushupsInput = document.getElementById('pushups');
+        const logList = document.getElementById('log-list');
+        const chartCanvas = document.getElementById('pushupChart');
+        let pushupChartInstance = null; // To hold the chart instance
+
+        // Utility to get today's date in YYYY-MM-DD format
+        function getTodayISO() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+            const day = String(today.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // Load logs from localStorage
+        function loadLogs() {
+            const logsJSON = localStorage.getItem(LOCAL_STORAGE_KEY);
+            try {
+                const logs = logsJSON ? JSON.parse(logsJSON) : [];
+                return Array.isArray(logs) ? logs : [];
+            } catch (e) {
+                console.error("Error parsing logs from localStorage:", e);
+                return []; 
+            }
+        }
+
+        // Save logs to localStorage
+        function saveLogs(logs) {
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(logs));
+        }
+
+        // Delete a log entry by date
+        function deleteLogEntry(dateToDelete) {
+            let logs = loadLogs();
+            logs = logs.filter(log => log.date !== dateToDelete);
+            saveLogs(logs);
+            renderLogs();
+        }
+
+        // Render Chart
+        function renderChart(logs) {
+            if (pushupChartInstance) {
+                pushupChartInstance.destroy(); // Destroy previous chart instance
+            }
+
+            // Sort logs by date for the chart (oldest to newest)
+            const sortedLogs = [...logs].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            const labels = sortedLogs.map(log => {
+                const dateParts = log.date.split('-');
+                const displayDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+                return displayDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            });
+            const data = sortedLogs.map(log => log.counts.pushups || 0);
+
+            if (chartCanvas) {
+                 pushupChartInstance = new Chart(chartCanvas, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Push-ups',
+                            data: data,
+                            borderColor: 'rgb(163, 230, 53)', // lime-400
+                            backgroundColor: 'rgba(163, 230, 53, 0.2)',
+                            tension: 0.1,
+                            borderWidth: 2,
+                            pointBackgroundColor: 'rgb(255, 255, 255)',
+                            pointBorderColor: 'rgb(163, 230, 53)',
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    color: 'rgb(255,255,255)' // White ticks
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.2)' // Lighter grid lines
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    color: 'rgb(255,255,255)' // White ticks
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.2)' // Lighter grid lines
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: 'rgb(255,255,255)' // White legend text
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+
+        // Render logs to the UI
+        function renderLogs() {
+            const logs = loadLogs();
+            logList.innerHTML = ''; 
+
+            // Sort for display (newest first)
+            const displayLogs = [...logs].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            displayLogs.forEach(logEntry => {
+                if (logEntry && logEntry.date && logEntry.counts && typeof logEntry.counts.pushups === 'number' && logEntry.counts.pushups > 0) {
+                    const listItem = document.createElement('li');
+                    listItem.className = 'p-3 border-2 border-white flex justify-between items-center';
+
+                    const textContainer = document.createElement('div');
+
+                    const countSpan = document.createElement('span');
+                    countSpan.textContent = `${logEntry.counts.pushups} Push-ups`;
+                    
+                    const dateSpan = document.createElement('span');
+                    dateSpan.className = 'block text-xs text-gray-400';
+                    const dateParts = logEntry.date.split('-');
+                    const displayDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+                    dateSpan.textContent = displayDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+                    textContainer.appendChild(countSpan);
+                    textContainer.appendChild(dateSpan);
+
+                    const deleteButton = document.createElement('button');
+                    deleteButton.textContent = 'Del';
+                    deleteButton.className = 'text-red-500 hover:text-red-300 font-bold py-1 px-2 border-2 border-red-500 hover:border-red-300 text-xs';
+                    deleteButton.dataset.date = logEntry.date; 
+                    deleteButton.addEventListener('click', function() {
+                        if (confirm(`Are you sure you want to delete the entry for ${dateSpan.textContent}?`)) {
+                            deleteLogEntry(this.dataset.date);
+                        }
+                    });
+
+                    listItem.appendChild(textContainer);
+                    listItem.appendChild(deleteButton);
+                    logList.appendChild(listItem);
+                }
+            });
+            renderChart(logs); // Update chart after rendering logs
+        }
+
+        // Event Listener for logging pushups
+        logButton.addEventListener('click', () => {
+            const count = parseInt(pushupsInput.value, 10);
+            const exerciseType = 'pushups'; 
+
+            if (count && count > 0) {
+                const logs = loadLogs();
+                const todayISO = getTodayISO();
+
+                let entryForToday = logs.find(log => log.date === todayISO);
+
+                if (entryForToday) {
+                    if (!entryForToday.counts) {
+                        entryForToday.counts = {}; 
+                    }
+                    entryForToday.counts[exerciseType] = (entryForToday.counts[exerciseType] || 0) + count;
+                } else {
+                    const newEntry = {
+                        date: todayISO,
+                        counts: {
+                            [exerciseType]: count
+                        }
+                    };
+                    logs.push(newEntry);
+                }
+
+                saveLogs(logs);
+                renderLogs();
+                pushupsInput.value = ''; 
+            } else {
+                alert("Please enter a valid number of push-ups.");
+                pushupsInput.value = '';
+            }
+        });
+
+        // Initial render on page load
+        document.addEventListener('DOMContentLoaded', renderLogs);
+    </script>
+</body>
+</html>
