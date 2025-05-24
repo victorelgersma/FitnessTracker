@@ -4,7 +4,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pull-up Logger</title>
+    <title>Run Logger</title>
     <script src="helpers.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -23,19 +23,19 @@
       <h1
         class="text-4xl md:text-5xl font-bold mb-6 md:mb-8 text-center uppercase tracking-wider"
       >
-        Pull-up Log
+        Run Log
       </h1>
 
       <div class="mb-6 md:mb-8">
         <label for="input" class="block text-lg mb-2 uppercase"
-          >Today's pull-ups</label
+          >Today's km</label
         >
         <input
           type="number"
           id="input"
           name="input"
           class="w-full p-3 bg-black text-white border-2 border-white focus:outline-none focus:border-lime-400 text-lg"
-          placeholder="Enter pull-ups"
+          placeholder="Enter km"
           min="1"
         />
       </div>
@@ -44,7 +44,7 @@
         id="logButton"
         class="w-full bg-lime-400 text-black font-bold py-3 px-4 border-2 border-lime-400 hover:bg-black hover:text-lime-400 transition-colors duration-150 text-lg uppercase tracking-wider"
       >
-        Log pull-ups
+        Log km
       </button>
 
       <!-- Canvas for the chart -->
@@ -70,9 +70,9 @@
     </div>
 
     <script>
-      const LOCAL_STORAGE_KEY = "pullupLogData";
-      const EXERCISE_TYPE = "pullups";
-      const UNIT_LABEL = "pull-ups";
+      const LOCAL_STORAGE_KEY = "runLogData";
+      const EXERCISE_TYPE = "km";
+      const UNIT_LABEL = "km";
 
       // DOM Elements
       const logButton = document.getElementById("logButton");

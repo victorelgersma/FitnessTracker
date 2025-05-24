@@ -1,3 +1,4 @@
+<!-- filepath: logger-template.ejs -->
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -26,13 +27,13 @@
       </h1>
 
       <div class="mb-6 md:mb-8">
-        <label for="meters" class="block text-lg mb-2 uppercase"
+        <label for="input" class="block text-lg mb-2 uppercase"
           >Today's meters</label
         >
         <input
           type="number"
-          id="meters"
-          name="meters"
+          id="input"
+          name="input"
           class="w-full p-3 bg-black text-white border-2 border-white focus:outline-none focus:border-lime-400 text-lg"
           placeholder="Enter meters"
           min="1"
@@ -43,17 +44,17 @@
         id="logButton"
         class="w-full bg-lime-400 text-black font-bold py-3 px-4 border-2 border-lime-400 hover:bg-black hover:text-lime-400 transition-colors duration-150 text-lg uppercase tracking-wider"
       >
-        Log Meters
+        Log meters
       </button>
 
       <!-- Canvas for the chart -->
-      <div class="mt-8 md:mt-12">
+      <div id="progress-section" class="mt-8 md:mt-12">
         <h2
           class="text-2xl md:text-3xl font-bold mb-4 uppercase tracking-wider"
         >
-          Swimming Progress
+          Progress
         </h2>
-        <canvas id="swimChart" class="border-2 border-white p-2"></canvas>
+        <canvas id="chart" class="border-2 border-white p-2"></canvas>
       </div>
 
       <div class="mt-8 md:mt-12">
@@ -70,13 +71,15 @@
 
     <script>
       const LOCAL_STORAGE_KEY = "swimLogData";
+      const EXERCISE_TYPE = "meters";
+      const UNIT_LABEL = "meters";
 
       // DOM Elements
       const logButton = document.getElementById("logButton");
-      const metersInput = document.getElementById("meters");
+      const input = document.getElementById("input");
       const logList = document.getElementById("log-list");
-      const chartCanvas = document.getElementById("swimChart");
-      let swimChartInstance = null;
+      const chartCanvas = document.getElementById("chart");
+      let chartInstance = null; // To hold the chart instance
 
       function getTodayISO() {
         const today = new Date();
@@ -86,6 +89,7 @@
         return `${year}-${month}-${day}`;
       }
 
+      // Load logs from localStorage
       function loadLogs() {
         const logsJSON = localStorage.getItem(LOCAL_STORAGE_KEY);
         try {
@@ -97,10 +101,12 @@
         }
       }
 
+      // Save logs to localStorage
       function saveLogs(logs) {
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(logs));
       }
 
+      // Delete a log entry by date
       function deleteLogEntry(dateToDelete) {
         let logs = loadLogs();
         logs = logs.filter((log) => log.date !== dateToDelete);
@@ -108,22 +114,25 @@
         renderLogs();
       }
 
+      // Render Chart
       function renderChart(logs) {
-        if (swimChartInstance) {
-          swimChartInstance.destroy();
+        if (chartInstance) {
+          chartInstance.destroy();
         }
 
         if (!logs.length) return;
 
+        // Find date range
         const sortedLogs = [...logs].sort(
           (a, b) => new Date(a.date) - new Date(b.date)
         );
         const startDate = new Date(sortedLogs[0].date);
         const endDate = new Date(sortedLogs[sortedLogs.length - 1].date);
 
+        // Generate all dates in range
         const dateMap = {};
         sortedLogs.forEach((log) => {
-          dateMap[log.date] = log.counts.meters || 0;
+          dateMap[log.date] = log.counts[EXERCISE_TYPE] || 0;
         });
 
         const labels = [];
@@ -141,16 +150,17 @@
         }
 
         if (chartCanvas) {
-          swimChartInstance = new Chart(chartCanvas, {
+          chartInstance = new Chart(chartCanvas, {
             type: "bar",
             data: {
               labels: labels,
               datasets: [
                 {
-                  label: "Meters",
+                  label:
+                    UNIT_LABEL.charAt(0).toUpperCase() + UNIT_LABEL.slice(1),
                   data: data,
-                  backgroundColor: "rgba(16, 185, 129, 0.7)", // teal-400
-                  borderColor: "rgb(16, 185, 129)",
+                  backgroundColor: "rgba(163, 230, 53, 0.7)",
+                  borderColor: "rgb(163, 230, 53)",
                   borderWidth: 2,
                 },
               ],
@@ -189,10 +199,12 @@
         }
       }
 
+      // Render logs to the UI
       function renderLogs() {
         const logs = loadLogs();
         logList.innerHTML = "";
 
+        // Sort for display (newest first)
         const displayLogs = [...logs].sort(
           (a, b) => new Date(b.date) - new Date(a.date)
         );
@@ -202,8 +214,8 @@
             logEntry &&
             logEntry.date &&
             logEntry.counts &&
-            typeof logEntry.counts.meters === "number" &&
-            logEntry.counts.meters > 0
+            typeof logEntry.counts[EXERCISE_TYPE] === "number" &&
+            logEntry.counts[EXERCISE_TYPE] > 0
           ) {
             const listItem = document.createElement("li");
             listItem.className =
@@ -212,7 +224,9 @@
             const textContainer = document.createElement("div");
 
             const countSpan = document.createElement("span");
-            countSpan.textContent = `${logEntry.counts.meters} meters`;
+            countSpan.textContent = `${logEntry.counts[EXERCISE_TYPE]} ${
+              UNIT_LABEL.charAt(0).toUpperCase() + UNIT_LABEL.slice(1)
+            }`;
 
             const dateSpan = document.createElement("span");
             dateSpan.className = "block text-xs text-gray-400";
@@ -251,12 +265,12 @@
             logList.appendChild(listItem);
           }
         });
-        renderChart(logs);
+        renderChart(logs); // Update chart after rendering logs
       }
 
+      // Event Listener for logging
       logButton.addEventListener("click", () => {
-        const count = parseInt(metersInput.value, 10);
-        const exerciseType = "meters";
+        const count = parseInt(input.value, 10);
 
         if (count && count > 0) {
           const logs = loadLogs();
@@ -268,13 +282,13 @@
             if (!entryForToday.counts) {
               entryForToday.counts = {};
             }
-            entryForToday.counts[exerciseType] =
-              (entryForToday.counts[exerciseType] || 0) + count;
+            entryForToday.counts[EXERCISE_TYPE] =
+              (entryForToday.counts[EXERCISE_TYPE] || 0) + count;
           } else {
             const newEntry = {
               date: todayISO,
               counts: {
-                [exerciseType]: count,
+                [EXERCISE_TYPE]: count,
               },
             };
             logs.push(newEntry);
@@ -282,14 +296,27 @@
 
           saveLogs(logs);
           renderLogs();
-          metersInput.value = "";
+          input.value = "";
         } else {
-          alert("Please enter a valid number of meters.");
-          metersInput.value = "";
+          alert(`Please enter a valid number of ${UNIT_LABEL}.`);
+          input.value = "";
         }
       });
 
+      // Initial render on page load
       document.addEventListener("DOMContentLoaded", renderLogs);
+
+      // In your <script> block, after defining LOCAL_STORAGE_KEY
+      document.addEventListener("DOMContentLoaded", function () {
+        const progressSection = document.getElementById("progress-section");
+        const logs = loadLogs();
+        if (
+          LOCAL_STORAGE_KEY === "runLogData" &&
+          (!Array.isArray(logs) || logs.length === 0)
+        ) {
+          progressSection.style.display = "none";
+        }
+      });
     </script>
   </body>
 </html>
