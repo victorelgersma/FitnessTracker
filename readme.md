@@ -1,4 +1,4 @@
-# 🦾 RepBrute
+# Fitness Tracker
 
 _successor to [victorelgersma/pushups](https://github.com/victorelgersma/pushups)_
 
