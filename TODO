@@ -1,4 +1,6 @@
 
  - [ ] add auth
  - [ ] add ability to edit entries in the past 
- - [ ] refactor pushups / pullups to be quite tight and similar
+
+# Done
+- [ ] use templating engine to refactor the logger template (i.e I have lots of loggers)
