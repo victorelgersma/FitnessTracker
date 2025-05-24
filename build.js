@@ -12,5 +12,5 @@ const template = fs.readFileSync('logger-template.ejs', 'utf8');
 
 configs.forEach(cfg => {
   const html = ejs.render(template, cfg);
-  fs.writeFileSync(`public/cfg.filename`, html);
+  fs.writeFileSync(`public/${cfg.filename}`, html);
 });
