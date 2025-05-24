@@ -1,6 +1,8 @@
 
  - [ ] add auth
- - [ ] add ability to edit entries in the past 
+ - [ ] add ability toRepBrute edit entries in the past 
+ - [ ] use view transitions
+ - [ ] visualise data with horizontal bars
 
 # Done
 - [ ] use templating engine to refactor the logger template (i.e I have lots of loggers)
