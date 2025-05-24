@@ -1,233 +1,295 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Swim Logger</title>
     <script src="helpers.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body class="bg-black text-white font-mono p-4 md:p-8">
-    <div class="container mx-auto max-w-md border-4 border-white p-6 md:p-8">
-        <h1 class="text-4xl md:text-5xl font-bold mb-6 md:mb-8 text-center uppercase tracking-wider">Swim Log</h1>
-
-        <div class="mb-6 md:mb-8">
-            <label for="meters" class="block text-lg mb-2 uppercase">Today's meters</label>
-            <input type="number" id="meters" name="meters" class="w-full p-3 bg-black text-white border-2 border-white focus:outline-none focus:border-lime-400 text-lg" placeholder="Enter meters" min="1">
-        </div>
-
-        <button id="logButton" class="w-full bg-lime-400 text-black font-bold py-3 px-4 border-2 border-lime-400 hover:bg-black hover:text-lime-400 transition-colors duration-150 text-lg uppercase tracking-wider">
-            Log Meters
-        </button>
-
-        <!-- Canvas for the chart -->
-        <div class="mt-8 md:mt-12">
-            <h2 class="text-2xl md:text-3xl font-bold mb-4 uppercase tracking-wider">Swimming Progress</h2>
-            <canvas id="swimChart" class="border-2 border-white p-2"></canvas>
-        </div>
-
-        <div class="mt-8 md:mt-12">
-            <h2 class="text-2xl md:text-3xl font-bold mb-4 uppercase tracking-wider">Entries</h2>
-            <ul id="log-list" class="space-y-3">
-                <!-- Logged entries will be dynamically inserted here by JavaScript -->
-            </ul>
-        </div>
+  </head>
+  <body class="bg-black text-white font-mono p-4 md:p-8">
+    <!-- Back Button -->
+    <div class="mb-6">
+      <a
+        href="index.html"
+        class="inline-block bg-white text-black font-bold py-2 px-4 border-2 border-black rounded hover:bg-black hover:text-white transition-colors duration-150 uppercase tracking-wider shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
+      >
+        ← Back
+      </a>
     </div>
-    
+    <div class="container mx-auto max-w-md border-4 border-white p-6 md:p-8">
+      <h1
+        class="text-4xl md:text-5xl font-bold mb-6 md:mb-8 text-center uppercase tracking-wider"
+      >
+        Swim Log
+      </h1>
+
+      <div class="mb-6 md:mb-8">
+        <label for="meters" class="block text-lg mb-2 uppercase"
+          >Today's meters</label
+        >
+        <input
+          type="number"
+          id="meters"
+          name="meters"
+          class="w-full p-3 bg-black text-white border-2 border-white focus:outline-none focus:border-lime-400 text-lg"
+          placeholder="Enter meters"
+          min="1"
+        />
+      </div>
+
+      <button
+        id="logButton"
+        class="w-full bg-lime-400 text-black font-bold py-3 px-4 border-2 border-lime-400 hover:bg-black hover:text-lime-400 transition-colors duration-150 text-lg uppercase tracking-wider"
+      >
+        Log Meters
+      </button>
+
+      <!-- Canvas for the chart -->
+      <div class="mt-8 md:mt-12">
+        <h2
+          class="text-2xl md:text-3xl font-bold mb-4 uppercase tracking-wider"
+        >
+          Swimming Progress
+        </h2>
+        <canvas id="swimChart" class="border-2 border-white p-2"></canvas>
+      </div>
+
+      <div class="mt-8 md:mt-12">
+        <h2
+          class="text-2xl md:text-3xl font-bold mb-4 uppercase tracking-wider"
+        >
+          Entries
+        </h2>
+        <ul id="log-list" class="space-y-3">
+          <!-- Logged entries will be dynamically inserted here by JavaScript -->
+        </ul>
+      </div>
+    </div>
+
     <script>
-        const LOCAL_STORAGE_KEY = 'swimLogData';
+      const LOCAL_STORAGE_KEY = "swimLogData";
 
-        // DOM Elements
-        const logButton = document.getElementById('logButton');
-        const metersInput = document.getElementById('meters');
-        const logList = document.getElementById('log-list');
-        const chartCanvas = document.getElementById('swimChart');
-        let swimChartInstance = null;
+      // DOM Elements
+      const logButton = document.getElementById("logButton");
+      const metersInput = document.getElementById("meters");
+      const logList = document.getElementById("log-list");
+      const chartCanvas = document.getElementById("swimChart");
+      let swimChartInstance = null;
 
-        function getTodayISO() {
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = String(today.getMonth() + 1).padStart(2, '0');
-            const day = String(today.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
+      function getTodayISO() {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, "0");
+        const day = String(today.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      }
+
+      function loadLogs() {
+        const logsJSON = localStorage.getItem(LOCAL_STORAGE_KEY);
+        try {
+          const logs = logsJSON ? JSON.parse(logsJSON) : [];
+          return Array.isArray(logs) ? logs : [];
+        } catch (e) {
+          console.error("Error parsing logs from localStorage:", e);
+          return [];
+        }
+      }
+
+      function saveLogs(logs) {
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(logs));
+      }
+
+      function deleteLogEntry(dateToDelete) {
+        let logs = loadLogs();
+        logs = logs.filter((log) => log.date !== dateToDelete);
+        saveLogs(logs);
+        renderLogs();
+      }
+
+      function renderChart(logs) {
+        if (swimChartInstance) {
+          swimChartInstance.destroy();
         }
 
-        function loadLogs() {
-            const logsJSON = localStorage.getItem(LOCAL_STORAGE_KEY);
-            try {
-                const logs = logsJSON ? JSON.parse(logsJSON) : [];
-                return Array.isArray(logs) ? logs : [];
-            } catch (e) {
-                console.error("Error parsing logs from localStorage:", e);
-                return []; 
-            }
-        }
+        if (!logs.length) return;
 
-        function saveLogs(logs) {
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(logs));
-        }
+        const sortedLogs = [...logs].sort(
+          (a, b) => new Date(a.date) - new Date(b.date)
+        );
+        const startDate = new Date(sortedLogs[0].date);
+        const endDate = new Date(sortedLogs[sortedLogs.length - 1].date);
 
-        function deleteLogEntry(dateToDelete) {
-            let logs = loadLogs();
-            logs = logs.filter(log => log.date !== dateToDelete);
-            saveLogs(logs);
-            renderLogs();
-        }
-
-        function renderChart(logs) {
-            if (swimChartInstance) {
-                swimChartInstance.destroy();
-            }
-
-            if (!logs.length) return;
-
-            const sortedLogs = [...logs].sort((a, b) => new Date(a.date) - new Date(b.date));
-            const startDate = new Date(sortedLogs[0].date);
-            const endDate = new Date(sortedLogs[sortedLogs.length - 1].date);
-
-            const dateMap = {};
-            sortedLogs.forEach(log => {
-                dateMap[log.date] = log.counts.meters || 0;
-            });
-
-            const labels = [];
-            const data = [];
-            for (
-                let d = new Date(startDate);
-                d <= endDate;
-                d.setDate(d.getDate() + 1)
-            ) {
-                const iso = d.toISOString().slice(0, 10);
-                labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-                data.push(dateMap[iso] || 0);
-            }
-
-            if (chartCanvas) {
-                swimChartInstance = new Chart(chartCanvas, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Meters',
-                            data: data,
-                            backgroundColor: 'rgba(16, 185, 129, 0.7)', // teal-400
-                            borderColor: 'rgb(16, 185, 129)',
-                            borderWidth: 2
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: true,
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                ticks: {
-                                    color: 'rgb(255,255,255)'
-                                },
-                                grid: {
-                                    color: 'rgba(255, 255, 255, 0.2)'
-                                }
-                            },
-                            x: {
-                                ticks: {
-                                    color: 'rgb(255,255,255)'
-                                },
-                                grid: {
-                                    color: 'rgba(255, 255, 255, 0.2)'
-                                }
-                            }
-                        },
-                        plugins: {
-                            legend: {
-                                labels: {
-                                    color: 'rgb(255,255,255)'
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-        }
-
-        function renderLogs() {
-            const logs = loadLogs();
-            logList.innerHTML = ''; 
-
-            const displayLogs = [...logs].sort((a, b) => new Date(b.date) - new Date(a.date));
-
-            displayLogs.forEach(logEntry => {
-                if (logEntry && logEntry.date && logEntry.counts && typeof logEntry.counts.meters === 'number' && logEntry.counts.meters > 0) {
-                    const listItem = document.createElement('li');
-                    listItem.className = 'p-3 border-2 border-white flex justify-between items-center';
-
-                    const textContainer = document.createElement('div');
-
-                    const countSpan = document.createElement('span');
-                    countSpan.textContent = `${logEntry.counts.meters} meters`;
-                    
-                    const dateSpan = document.createElement('span');
-                    dateSpan.className = 'block text-xs text-gray-400';
-                    const dateParts = logEntry.date.split('-');
-                    const displayDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
-                    dateSpan.textContent = displayDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-
-                    textContainer.appendChild(countSpan);
-                    textContainer.appendChild(dateSpan);
-
-                    const deleteButton = document.createElement('button');
-                    deleteButton.textContent = 'Del';
-                    deleteButton.className = 'text-red-500 hover:text-red-300 font-bold py-1 px-2 border-2 border-red-500 hover:border-red-300 text-xs';
-                    deleteButton.dataset.date = logEntry.date; 
-                    deleteButton.addEventListener('click', function() {
-                        if (confirm(`Are you sure you want to delete the entry for ${dateSpan.textContent}?`)) {
-                            deleteLogEntry(this.dataset.date);
-                        }
-                    });
-
-                    listItem.appendChild(textContainer);
-                    listItem.appendChild(deleteButton);
-                    logList.appendChild(listItem);
-                }
-            });
-            renderChart(logs);
-        }
-
-        logButton.addEventListener('click', () => {
-            const count = parseInt(metersInput.value, 10);
-            const exerciseType = 'meters'; 
-
-            if (count && count > 0) {
-                const logs = loadLogs();
-                const todayISO = getTodayISO();
-
-                let entryForToday = logs.find(log => log.date === todayISO);
-
-                if (entryForToday) {
-                    if (!entryForToday.counts) {
-                        entryForToday.counts = {}; 
-                    }
-                    entryForToday.counts[exerciseType] = (entryForToday.counts[exerciseType] || 0) + count;
-                } else {
-                    const newEntry = {
-                        date: todayISO,
-                        counts: {
-                            [exerciseType]: count
-                        }
-                    };
-                    logs.push(newEntry);
-                }
-
-                saveLogs(logs);
-                renderLogs();
-                metersInput.value = ''; 
-            } else {
-                alert("Please enter a valid number of meters.");
-                metersInput.value = '';
-            }
+        const dateMap = {};
+        sortedLogs.forEach((log) => {
+          dateMap[log.date] = log.counts.meters || 0;
         });
 
-        document.addEventListener('DOMContentLoaded', renderLogs);
+        const labels = [];
+        const data = [];
+        for (
+          let d = new Date(startDate);
+          d <= endDate;
+          d.setDate(d.getDate() + 1)
+        ) {
+          const iso = d.toISOString().slice(0, 10);
+          labels.push(
+            d.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+          );
+          data.push(dateMap[iso] || 0);
+        }
+
+        if (chartCanvas) {
+          swimChartInstance = new Chart(chartCanvas, {
+            type: "bar",
+            data: {
+              labels: labels,
+              datasets: [
+                {
+                  label: "Meters",
+                  data: data,
+                  backgroundColor: "rgba(16, 185, 129, 0.7)", // teal-400
+                  borderColor: "rgb(16, 185, 129)",
+                  borderWidth: 2,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: true,
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  ticks: {
+                    color: "rgb(255,255,255)",
+                  },
+                  grid: {
+                    color: "rgba(255, 255, 255, 0.2)",
+                  },
+                },
+                x: {
+                  ticks: {
+                    color: "rgb(255,255,255)",
+                  },
+                  grid: {
+                    color: "rgba(255, 255, 255, 0.2)",
+                  },
+                },
+              },
+              plugins: {
+                legend: {
+                  labels: {
+                    color: "rgb(255,255,255)",
+                  },
+                },
+              },
+            },
+          });
+        }
+      }
+
+      function renderLogs() {
+        const logs = loadLogs();
+        logList.innerHTML = "";
+
+        const displayLogs = [...logs].sort(
+          (a, b) => new Date(b.date) - new Date(a.date)
+        );
+
+        displayLogs.forEach((logEntry) => {
+          if (
+            logEntry &&
+            logEntry.date &&
+            logEntry.counts &&
+            typeof logEntry.counts.meters === "number" &&
+            logEntry.counts.meters > 0
+          ) {
+            const listItem = document.createElement("li");
+            listItem.className =
+              "p-3 border-2 border-white flex justify-between items-center";
+
+            const textContainer = document.createElement("div");
+
+            const countSpan = document.createElement("span");
+            countSpan.textContent = `${logEntry.counts.meters} meters`;
+
+            const dateSpan = document.createElement("span");
+            dateSpan.className = "block text-xs text-gray-400";
+            const dateParts = logEntry.date.split("-");
+            const displayDate = new Date(
+              dateParts[0],
+              dateParts[1] - 1,
+              dateParts[2]
+            );
+            dateSpan.textContent = displayDate.toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            });
+
+            textContainer.appendChild(countSpan);
+            textContainer.appendChild(dateSpan);
+
+            const deleteButton = document.createElement("button");
+            deleteButton.textContent = "Del";
+            deleteButton.className =
+              "text-red-500 hover:text-red-300 font-bold py-1 px-2 border-2 border-red-500 hover:border-red-300 text-xs";
+            deleteButton.dataset.date = logEntry.date;
+            deleteButton.addEventListener("click", function () {
+              if (
+                confirm(
+                  `Are you sure you want to delete the entry for ${dateSpan.textContent}?`
+                )
+              ) {
+                deleteLogEntry(this.dataset.date);
+              }
+            });
+
+            listItem.appendChild(textContainer);
+            listItem.appendChild(deleteButton);
+            logList.appendChild(listItem);
+          }
+        });
+        renderChart(logs);
+      }
+
+      logButton.addEventListener("click", () => {
+        const count = parseInt(metersInput.value, 10);
+        const exerciseType = "meters";
+
+        if (count && count > 0) {
+          const logs = loadLogs();
+          const todayISO = getTodayISO();
+
+          let entryForToday = logs.find((log) => log.date === todayISO);
+
+          if (entryForToday) {
+            if (!entryForToday.counts) {
+              entryForToday.counts = {};
+            }
+            entryForToday.counts[exerciseType] =
+              (entryForToday.counts[exerciseType] || 0) + count;
+          } else {
+            const newEntry = {
+              date: todayISO,
+              counts: {
+                [exerciseType]: count,
+              },
+            };
+            logs.push(newEntry);
+          }
+
+          saveLogs(logs);
+          renderLogs();
+          metersInput.value = "";
+        } else {
+          alert("Please enter a valid number of meters.");
+          metersInput.value = "";
+        }
+      });
+
+      document.addEventListener("DOMContentLoaded", renderLogs);
     </script>
-</body>
+  </body>
 </html>
